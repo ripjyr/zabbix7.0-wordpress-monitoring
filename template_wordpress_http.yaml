@@ -271,3 +271,20 @@ Checks include:
               url: 'https://{HOST.HOST}{$WPROOT}readme.html'
               priority: WARNING
               manual_close: 'YES'
+            - uuid: 24e61dcac68a44b280e4fffa653ae6a9
+          name: 'WordPress directory listing wp-content/uploads'
+          type: HTTP_AGENT
+          key: wordpress.dirlisting.wpcontent
+          delay: 1d
+          value_type: TEXT
+          trends: '0'
+          url: 'https://{HOST.HOST}{$WPROOT}wp-content/uploads/'
+          status_codes: ''
+          triggers:
+            - uuid: f3ec35a512a04110ac122d31268c4331
+              expression: 'find(/WordpressCheck/wordpress.dirlisting.wpcontent,,"like","Index of")=1 and find(/WordpressCheck/wordpress.dirlisting.wpcontent,,"like","Parent Directory")=1'
+              name: 'WordPress directory listing enabled (wp-content/uploads)'
+              url_name: 'Open directory'
+              url: 'https://{HOST.HOST}{$WPROOT}wp-content/uploads/'
+              priority: HIGH
+              manual_close: 'YES'
