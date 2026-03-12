@@ -17,15 +17,18 @@ zabbix_export:
 
         Checks include:
         - WordPress admin panel exposure
-        - login page exposure
-        - xmlrpc endpoint
-        - REST API
-        - user enumeration
+        - WordPress login page exposure
+        - WordPress XML-RPC endpoint
+        - WordPress REST API availability
+        - user enumeration via REST API
         - debug log exposure
         - config backup exposure
         - git repository exposure
         - install script exposure
+        - WordPress license.txt exposure
+        - WordPress version leak via readme.html
         - WordPress version detection via RSS
+Checks include:
 
         Designed for Zabbix 7.x.
 
@@ -220,3 +223,51 @@ zabbix_export:
               parameters:
                 - '<generator>.*\?v=([0-9\.]+)</generator>'
                 - \1
+
+        - uuid: 8723d85eaa6a4512ae5c4e515e759add
+          name: 'WordPress License'
+          type: HTTP_AGENT
+          key: wordpress.license.status
+          delay: 1d
+          preprocessing:
+            - type: REGEX
+              parameters:
+                - '(?s).*HTTP/[0-9\.]+\s([0-9]{3})\b(?!.*HTTP/)'
+                - \1
+              error_handler: CUSTOM_ERROR
+              error_handler_params: 'unknown HTTP code need to check url.'
+          url: 'https://{HOST.HOST}{$WPROOT}license.txt'
+          status_codes: ''
+          retrieve_mode: HEADERS
+          triggers:
+            - uuid: 1f43a0bb7f6e4a6d92a9d43f0a6c14d2
+              expression: last(/WordpressCheck/wordpress.license.status)=200
+              name: 'WordPress license.txt exposed'
+              url_name: 'https://{HOST.HOST}{$WPROOT}license.txt'
+              url: 'https://{HOST.HOST}{$WPROOT}license.txt'
+              priority: INFO
+              manual_close: 'YES'
+
+        - uuid: 75aadb8b3d224c1bb02b0dc10faf017b
+          name: 'WordPress Readme'
+          type: HTTP_AGENT
+          key: wordpress.readme.status
+          delay: 1d
+          preprocessing:
+            - type: REGEX
+              parameters:
+                - '(?s).*HTTP/[0-9\.]+\s([0-9]{3})\b(?!.*HTTP/)'
+                - \1
+              error_handler: CUSTOM_ERROR
+              error_handler_params: 'unknown HTTP code need to check url.'
+          url: 'https://{HOST.HOST}{$WPROOT}readme.html'
+          status_codes: ''
+          retrieve_mode: HEADERS
+          triggers:
+            - uuid: 7e1802ab9b16430ab442a6b5a28013cf
+              expression: last(/WordpressCheck/wordpress.readme.status)=200
+              name: 'WordPress version leak via readme.html'
+              url_name: 'https://{HOST.HOST}{$WPROOT}readme.html'
+              url: 'https://{HOST.HOST}{$WPROOT}readme.html'
+              priority: WARNING
+              manual_close: 'YES'
