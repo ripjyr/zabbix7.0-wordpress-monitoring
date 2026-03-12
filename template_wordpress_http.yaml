@@ -28,7 +28,6 @@ zabbix_export:
         - WordPress license.txt exposure
         - WordPress version leak via readme.html
         - WordPress version detection via RSS
-Checks include:
 
         Designed for Zabbix 7.x.
 
@@ -271,7 +270,7 @@ Checks include:
               url: 'https://{HOST.HOST}{$WPROOT}readme.html'
               priority: WARNING
               manual_close: 'YES'
-            - uuid: 24e61dcac68a44b280e4fffa653ae6a9
+        - uuid: 24e61dcac68a44b280e4fffa653ae6a9
           name: 'WordPress directory listing wp-content/uploads'
           type: HTTP_AGENT
           key: wordpress.dirlisting.wpcontent
