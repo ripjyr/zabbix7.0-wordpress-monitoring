@@ -1,0 +1,1 @@
+# zabbix7.0-wordpress-monitoring
