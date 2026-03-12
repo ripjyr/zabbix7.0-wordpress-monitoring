@@ -28,7 +28,7 @@ zabbix_export:
         - WordPress license.txt exposure
         - WordPress version leak via readme.html
         - WordPress version detection via RSS
-
+        - directory listing exposure in wp-content/uploads
         Designed for Zabbix 7.x.
 
       groups:
