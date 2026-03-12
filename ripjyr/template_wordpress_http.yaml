@@ -1,0 +1,222 @@
+zabbix_export:
+  version: '7.0'
+
+  template_groups:
+    - uuid: 0d9a5b3e0fbe4b8c9e1a3e92e4e00001
+      name: Templates/Web
+
+  templates:
+    - uuid: 0d9a5b3e0fbe4b8c9e1a3e92e4e00002
+      template: Template_WordPress_Security_HTTP
+      name: Template WordPress Security HTTP
+      description: |
+        WordPress external monitoring and security exposure checks.
+
+        This template detects common WordPress misconfigurations and
+        information leaks using HTTP Agent checks.
+
+        Checks include:
+        - WordPress admin panel exposure
+        - login page exposure
+        - xmlrpc endpoint
+        - REST API
+        - user enumeration
+        - debug log exposure
+        - config backup exposure
+        - git repository exposure
+        - install script exposure
+        - WordPress version detection via RSS
+
+        Designed for Zabbix 7.x.
+
+      groups:
+        - name: Templates/Web
+
+      macros:
+        - macro: '{$WPROOT}'
+          value: /
+          description: "Wordpress root path (example: / or /wp/)"
+
+      items:
+
+        - uuid: 023f2c3febc444bcb665eedbcc4dc78a
+          name: WordPress Admin Panel
+          type: HTTP_AGENT
+          key: wordpress.admin.status
+          delay: 1d
+          url: 'https://{HOST.HOST}{$WPROOT}wp-admin/'
+          retrieve_mode: HEADERS
+          preprocessing:
+            - type: REGEX
+              parameters:
+                - '(?s).*HTTP/[0-9\.]+\s([0-9]{3})\b(?!.*HTTP/)'
+                - \1
+          triggers:
+            - uuid: b394ae7c359746c58f13d36f6d523d88
+              expression: last(/Template_WordPress_Security_HTTP/wordpress.admin.status)=200
+              name: WordPress admin panel exposed
+              priority: WARNING
+              manual_close: 'YES'
+
+        - uuid: fb17cc98ed144aed9fbf0f60ae38b6d8
+          name: WordPress Author Enumeration
+          type: HTTP_AGENT
+          key: wordpress.author.status
+          delay: 1d
+          url: 'https://{HOST.HOST}{$WPROOT}?author=1'
+          retrieve_mode: HEADERS
+          preprocessing:
+            - type: REGEX
+              parameters:
+                - '(?s).*HTTP/[0-9\.]+\s([0-9]{3})\b(?!.*HTTP/)'
+                - \1
+
+        - uuid: 3f6117fdce1741689e1be994a1830f6a
+          name: WordPress Config Backup
+          type: HTTP_AGENT
+          key: wordpress.configbak.status
+          delay: 1d
+          url: 'https://{HOST.HOST}{$WPROOT}wp-config.php.bak'
+          retrieve_mode: HEADERS
+          preprocessing:
+            - type: REGEX
+              parameters:
+                - '(?s).*HTTP/[0-9\.]+\s([0-9]{3})\b(?!.*HTTP/)'
+                - \1
+          triggers:
+            - uuid: 2e90ebb4f0c043cdad0c30f9aee36e7a
+              expression: last(/Template_WordPress_Security_HTTP/wordpress.configbak.status)=200
+              name: WordPress config backup exposed
+              priority: HIGH
+              manual_close: 'YES'
+
+        - uuid: 94c2b7b457b64384b79fb7ab11bb082f
+          name: WordPress Debug Log
+          type: HTTP_AGENT
+          key: wordpress.debug.status
+          delay: 1d
+          url: 'https://{HOST.HOST}{$WPROOT}wp-content/debug.log'
+          retrieve_mode: HEADERS
+          preprocessing:
+            - type: REGEX
+              parameters:
+                - '(?s).*HTTP/[0-9\.]+\s([0-9]{3})\b(?!.*HTTP/)'
+                - \1
+          triggers:
+            - uuid: bea161417f9f4eb79573da3795ad97ba
+              expression: last(/Template_WordPress_Security_HTTP/wordpress.debug.status)=200
+              name: WordPress debug log exposed
+              priority: HIGH
+              manual_close: 'YES'
+
+        - uuid: 98e57b79725a419aad74186d80eefa9c
+          name: WordPress Git Exposure
+          type: HTTP_AGENT
+          key: wordpress.git.status
+          delay: 1d
+          url: 'https://{HOST.HOST}{$WPROOT}.git/'
+          retrieve_mode: HEADERS
+          preprocessing:
+            - type: REGEX
+              parameters:
+                - '(?s).*HTTP/[0-9\.]+\s([0-9]{3})\b(?!.*HTTP/)'
+                - \1
+          triggers:
+            - uuid: 7eb3925254ff46ed923eca0a6e46e14f
+              expression: last(/Template_WordPress_Security_HTTP/wordpress.git.status)=200
+              name: WordPress git directory exposed
+              priority: HIGH
+              manual_close: 'YES'
+
+        - uuid: aa5dceedeaa342b2a12cff412ecffa26
+          name: WordPress Install Script
+          type: HTTP_AGENT
+          key: wordpress.install.status
+          delay: 1d
+          url: 'https://{HOST.HOST}{$WPROOT}wp-admin/install.php'
+          retrieve_mode: HEADERS
+          preprocessing:
+            - type: REGEX
+              parameters:
+                - '(?s).*HTTP/[0-9\.]+\s([0-9]{3})\b(?!.*HTTP/)'
+                - \1
+          triggers:
+            - uuid: 43888b04e65045c19d041fb6ac86e745
+              expression: last(/Template_WordPress_Security_HTTP/wordpress.install.status)=200
+              name: WordPress install script exposed
+              priority: HIGH
+              manual_close: 'YES'
+
+        - uuid: b153f19e0ab64bf8815d87b9055e6110
+          name: WordPress Login Page
+          type: HTTP_AGENT
+          key: wordpress.login.status
+          delay: 1d
+          url: 'https://{HOST.HOST}{$WPROOT}wp-login.php'
+          retrieve_mode: HEADERS
+          preprocessing:
+            - type: REGEX
+              parameters:
+                - '(?s).*HTTP/[0-9\.]+\s([0-9]{3})\b(?!.*HTTP/)'
+                - \1
+          triggers:
+            - uuid: d39bf637f95a4dcfa1e6402128ea3a75
+              expression: last(/Template_WordPress_Security_HTTP/wordpress.login.status)=200
+              name: WordPress login page accessible
+              priority: INFO
+              manual_close: 'YES'
+
+        - uuid: 72867a87cfc04ba4a02ddadab9d2ac61
+          name: WordPress REST API
+          type: HTTP_AGENT
+          key: wordpress.rest.status
+          delay: 1d
+          url: 'https://{HOST.HOST}{$WPROOT}wp-json/'
+          retrieve_mode: HEADERS
+          preprocessing:
+            - type: REGEX
+              parameters:
+                - '(?s).*HTTP/[0-9\.]+\s([0-9]{3})\b(?!.*HTTP/)'
+                - \1
+
+        - uuid: f3409caef60e4674ba14e00de2252d0c
+          name: WordPress Users API
+          type: HTTP_AGENT
+          key: wordpress.users.body
+          delay: 1d
+          value_type: TEXT
+          trends: '0'
+          url: 'https://{HOST.HOST}{$WPROOT}wp-json/wp/v2/users'
+          triggers:
+            - uuid: 47c13fba631d4cdfa18c5750a76afe79
+              expression: 'find(/Template_WordPress_Security_HTTP/wordpress.users.body,,"like","name")=1'
+              name: WordPress user enumeration possible
+              priority: HIGH
+              manual_close: 'YES'
+
+        - uuid: 1a09e0dc39144a658aa96d949041c268
+          name: WordPress XMLRPC
+          type: HTTP_AGENT
+          key: wordpress.xmlrpc.status
+          delay: 1d
+          url: 'https://{HOST.HOST}{$WPROOT}xmlrpc.php'
+          retrieve_mode: HEADERS
+          preprocessing:
+            - type: REGEX
+              parameters:
+                - '(?s).*HTTP/[0-9\.]+\s([0-9]{3})\b(?!.*HTTP/)'
+                - \1
+
+        - uuid: 1a7c3ea78dd54f90a697417a9453b30a
+          name: WordPress Version (RSS)
+          type: HTTP_AGENT
+          key: wordpress.version.feed
+          delay: 1d
+          value_type: CHAR
+          trends: '0'
+          url: 'https://{HOST.HOST}{$WPROOT}feed/'
+          preprocessing:
+            - type: REGEX
+              parameters:
+                - '<generator>.*\?v=([0-9\.]+)</generator>'
+                - \1
