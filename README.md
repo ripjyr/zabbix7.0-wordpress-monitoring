@@ -4,11 +4,13 @@
 
 This repository provides a monitoring template for detecting common security exposures and misconfigurations in **WordPress** websites using **Zabbix HTTP Agent checks**.
 
-The template performs external checks against publicly accessible URLs to identify information leaks, exposed files, and potentially risky WordPress features.
+The template performs lightweight external checks against publicly accessible URLs to identify information leaks, exposed files, and potentially risky WordPress features.
 
 It helps administrators quickly detect security misconfigurations and improve the security posture of their WordPress installations.
 
-This template is compatible with **Zabbix 7.0+**.
+The template is designed for **low-impact monitoring** and does not require installing any agent or plugin on the monitored WordPress server.
+
+Compatible with **Zabbix 7.0+**.
 
 ---
 
@@ -36,6 +38,28 @@ The template monitors the following potential exposure points:
 
 ---
 
+## Intended Use
+
+This template is intended for:
+
+* Security auditing
+* External monitoring
+* Security investigation
+
+It helps identify publicly exposed resources and potential information leaks in WordPress installations.
+
+---
+
+## Scope
+
+This template performs **passive external checks only**.
+
+It does **not attempt to exploit vulnerabilities** or perform intrusive scanning.
+
+All checks are limited to simple HTTP requests to publicly accessible endpoints.
+
+---
+
 ## Requirements
 
 * Zabbix 7.0 or later
@@ -48,13 +72,13 @@ The template monitors the following potential exposure points:
 
 1. Download the template YAML file.
 
-2. In Zabbix Web UI:
+2. In the Zabbix Web UI navigate to:
 
 ```
 Data collection → Templates → Import
 ```
 
-3. Upload the YAML template file.
+3. Upload the YAML template.
 
 4. Assign the template to the target host.
 
@@ -77,12 +101,12 @@ Example values:
 or
 
 ```
-/wordpress/
+/wp/
 ```
 
 This macro defines the root path of the WordPress installation.
 
-Example:
+Example configuration:
 
 | Site URL                | Macro Value |
 | ----------------------- | ----------- |
@@ -110,30 +134,20 @@ Most triggers require **manual close** to ensure administrators acknowledge the 
 
 ## Monitoring Method
 
-All checks are performed using **HTTP HEAD or GET requests** via Zabbix HTTP Agent.
+All checks are performed using **HTTP HEAD or GET requests** via the Zabbix HTTP Agent.
 
-HTTP status codes are extracted using regex preprocessing.
-
-Example:
+HTTP status codes are extracted using regex preprocessing:
 
 ```
 HTTP/[0-9\.]+\s([0-9]{3})
 ```
 
-Directory listing detection is performed by scanning the response body for typical Apache directory index markers such as:
+Directory listing detection is performed by scanning the response body for typical directory index markers:
 
 ```
 Index of
 Parent Directory
 ```
-
----
-
-## Security Note
-
-This template detects **exposed resources**, but it does not exploit vulnerabilities.
-
-Detected items should be reviewed and secured according to WordPress security best practices.
 
 ---
 
@@ -147,13 +161,14 @@ Detected items should be reviewed and secured according to WordPress security be
 
 ## License
 
-This project is released under the MIT License.
+This project is released under the **MIT License**.
 
 ---
 
 ## Disclaimer
 
 This template is provided for monitoring and security awareness purposes.
+
 Use it at your own risk.
 
 ---
