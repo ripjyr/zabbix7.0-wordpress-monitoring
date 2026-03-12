@@ -222,6 +222,15 @@ zabbix_export:
               parameters:
                 - '<generator>.*\?v=([0-9\.]+)</generator>'
                 - \1
+          triggers:
+            - uuid: 2925fb9eff9c42b986cc815bb4196a3a
+              expression: change(/WordpressCheck/wordpress.version.feed)<>0
+              name: 'WordPress version changed'
+              opdata: 'WordPress version changed from {ITEM.PREVVALUE1} to {ITEM.LASTVALUE1}. Check changelog.'
+              url_name: 'https://{HOST.HOST}{$WPROOT}'
+              url: 'https://{HOST.HOST}{$WPROOT}'
+              priority: INFO
+              manual_close: 'YES'
 
         - uuid: 8723d85eaa6a4512ae5c4e515e759add
           name: 'WordPress License'
