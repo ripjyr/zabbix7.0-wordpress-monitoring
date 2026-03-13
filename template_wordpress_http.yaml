@@ -38,6 +38,12 @@ zabbix_export:
         - macro: '{$WPROOT}'
           value: /
           description: "Wordpress root path (example: / or /wp/)"
+        - macro: '{$WP_PROTO}'
+          value: https
+          description: 'Protocol used for WordPress monitoring (http or https)'
+        - macro: '{$WP_PORT}'
+          value: '443'
+          description: 'Port used for WordPress monitoring'
 
       items:
 
@@ -46,7 +52,7 @@ zabbix_export:
           type: HTTP_AGENT
           key: wordpress.admin.status
           delay: 1d
-          url: 'https://{HOST.HOST}{$WPROOT}wp-admin/'
+          url: '{$WP_PROTO}://{HOST.HOST}:{$WP_PORT}{$WPROOT}wp-admin/'
           retrieve_mode: HEADERS
           preprocessing:
             - type: REGEX
@@ -65,7 +71,7 @@ zabbix_export:
           type: HTTP_AGENT
           key: wordpress.author.status
           delay: 1d
-          url: 'https://{HOST.HOST}{$WPROOT}?author=1'
+          url: '{$WP_PROTO}://{HOST.HOST}:{$WP_PORT}{$WPROOT}?author=1'
           retrieve_mode: HEADERS
           preprocessing:
             - type: REGEX
@@ -78,7 +84,7 @@ zabbix_export:
           type: HTTP_AGENT
           key: wordpress.configbak.status
           delay: 1d
-          url: 'https://{HOST.HOST}{$WPROOT}wp-config.php.bak'
+          url: '{$WP_PROTO}://{HOST.HOST}:{$WP_PORT}{$WPROOT}wp-config.php.bak'
           retrieve_mode: HEADERS
           preprocessing:
             - type: REGEX
@@ -97,7 +103,7 @@ zabbix_export:
           type: HTTP_AGENT
           key: wordpress.debug.status
           delay: 1d
-          url: 'https://{HOST.HOST}{$WPROOT}wp-content/debug.log'
+          url: '{$WP_PROTO}://{HOST.HOST}:{$WP_PORT}{$WPROOT}wp-content/debug.log'
           retrieve_mode: HEADERS
           preprocessing:
             - type: REGEX
@@ -116,7 +122,7 @@ zabbix_export:
           type: HTTP_AGENT
           key: wordpress.git.status
           delay: 1d
-          url: 'https://{HOST.HOST}{$WPROOT}.git/'
+          url: '{$WP_PROTO}://{HOST.HOST}:{$WP_PORT}{$WPROOT}.git/'
           retrieve_mode: HEADERS
           preprocessing:
             - type: REGEX
@@ -135,7 +141,7 @@ zabbix_export:
           type: HTTP_AGENT
           key: wordpress.install.status
           delay: 1d
-          url: 'https://{HOST.HOST}{$WPROOT}wp-admin/install.php'
+          url: '{$WP_PROTO}://{HOST.HOST}:{$WP_PORT}{$WPROOT}wp-admin/install.php'
           retrieve_mode: HEADERS
           preprocessing:
             - type: REGEX
@@ -154,7 +160,7 @@ zabbix_export:
           type: HTTP_AGENT
           key: wordpress.login.status
           delay: 1d
-          url: 'https://{HOST.HOST}{$WPROOT}wp-login.php'
+          url: '{$WP_PROTO}://{HOST.HOST}:{$WP_PORT}{$WPROOT}wp-login.php'
           retrieve_mode: HEADERS
           preprocessing:
             - type: REGEX
@@ -173,7 +179,7 @@ zabbix_export:
           type: HTTP_AGENT
           key: wordpress.rest.status
           delay: 1d
-          url: 'https://{HOST.HOST}{$WPROOT}wp-json/'
+          url: '{$WP_PROTO}://{HOST.HOST}:{$WP_PORT}{$WPROOT}wp-json/'
           retrieve_mode: HEADERS
           preprocessing:
             - type: REGEX
@@ -188,7 +194,7 @@ zabbix_export:
           delay: 1d
           value_type: TEXT
           trends: '0'
-          url: 'https://{HOST.HOST}{$WPROOT}wp-json/wp/v2/users'
+          url: '{$WP_PROTO}://{HOST.HOST}:{$WP_PORT}{$WPROOT}wp-json/wp/v2/users'
           triggers:
             - uuid: 47c13fba631d4cdfa18c5750a76afe79
               expression: 'find(/Template_WordPress_Security_HTTP/wordpress.users.body,,"like","name")=1'
@@ -201,7 +207,7 @@ zabbix_export:
           type: HTTP_AGENT
           key: wordpress.xmlrpc.status
           delay: 1d
-          url: 'https://{HOST.HOST}{$WPROOT}xmlrpc.php'
+          url: '{$WP_PROTO}://{HOST.HOST}:{$WP_PORT}{$WPROOT}xmlrpc.php'
           retrieve_mode: HEADERS
           preprocessing:
             - type: REGEX
@@ -216,7 +222,7 @@ zabbix_export:
           delay: 1d
           value_type: CHAR
           trends: '0'
-          url: 'https://{HOST.HOST}{$WPROOT}feed/'
+          url: '{$WP_PROTO}://{HOST.HOST}:{$WP_PORT}{$WPROOT}feed/'
           preprocessing:
             - type: REGEX
               parameters:
@@ -227,8 +233,8 @@ zabbix_export:
               expression: change(/WordpressCheck/wordpress.version.feed)<>0
               name: 'WordPress version changed'
               opdata: 'WordPress version changed from {ITEM.PREVVALUE1} to {ITEM.LASTVALUE1}. Check changelog.'
-              url_name: 'https://{HOST.HOST}{$WPROOT}'
-              url: 'https://{HOST.HOST}{$WPROOT}'
+              url_name: '{$WP_PROTO}://{HOST.HOST}:{$WP_PORT}{$WPROOT}'
+              url: '{$WP_PROTO}://{HOST.HOST}:{$WP_PORT}{$WPROOT}'
               priority: INFO
               manual_close: 'YES'
 
@@ -244,15 +250,15 @@ zabbix_export:
                 - \1
               error_handler: CUSTOM_ERROR
               error_handler_params: 'unknown HTTP code need to check url.'
-          url: 'https://{HOST.HOST}{$WPROOT}license.txt'
+          url: '{$WP_PROTO}://{HOST.HOST}:{$WP_PORT}{$WPROOT}license.txt'
           status_codes: ''
           retrieve_mode: HEADERS
           triggers:
             - uuid: 1f43a0bb7f6e4a6d92a9d43f0a6c14d2
               expression: last(/WordpressCheck/wordpress.license.status)=200
               name: 'WordPress license.txt exposed'
-              url_name: 'https://{HOST.HOST}{$WPROOT}license.txt'
-              url: 'https://{HOST.HOST}{$WPROOT}license.txt'
+              url_name: '{$WP_PROTO}://{HOST.HOST}:{$WP_PORT}{$WPROOT}license.txt'
+              url: '{$WP_PROTO}://{HOST.HOST}:{$WP_PORT}{$WPROOT}license.txt'
               priority: INFO
               manual_close: 'YES'
 
@@ -268,15 +274,15 @@ zabbix_export:
                 - \1
               error_handler: CUSTOM_ERROR
               error_handler_params: 'unknown HTTP code need to check url.'
-          url: 'https://{HOST.HOST}{$WPROOT}readme.html'
+          url: '{$WP_PROTO}://{HOST.HOST}:{$WP_PORT}{$WPROOT}readme.html'
           status_codes: ''
           retrieve_mode: HEADERS
           triggers:
             - uuid: 7e1802ab9b16430ab442a6b5a28013cf
               expression: last(/WordpressCheck/wordpress.readme.status)=200
               name: 'WordPress version leak via readme.html'
-              url_name: 'https://{HOST.HOST}{$WPROOT}readme.html'
-              url: 'https://{HOST.HOST}{$WPROOT}readme.html'
+              url_name: '{$WP_PROTO}://{HOST.HOST}:{$WP_PORT}{$WPROOT}readme.html'
+              url: '{$WP_PROTO}://{HOST.HOST}:{$WP_PORT}{$WPROOT}readme.html'
               priority: WARNING
               manual_close: 'YES'
         - uuid: 24e61dcac68a44b280e4fffa653ae6a9
@@ -286,13 +292,13 @@ zabbix_export:
           delay: 1d
           value_type: TEXT
           trends: '0'
-          url: 'https://{HOST.HOST}{$WPROOT}wp-content/uploads/'
+          url: '{$WP_PROTO}://{HOST.HOST}:{$WP_PORT}{$WPROOT}wp-content/uploads/'
           status_codes: ''
           triggers:
             - uuid: f3ec35a512a04110ac122d31268c4331
               expression: 'find(/WordpressCheck/wordpress.dirlisting.wpcontent,,"like","Index of")=1 and find(/WordpressCheck/wordpress.dirlisting.wpcontent,,"like","Parent Directory")=1'
               name: 'WordPress directory listing enabled (wp-content/uploads)'
               url_name: 'Open directory'
-              url: 'https://{HOST.HOST}{$WPROOT}wp-content/uploads/'
+              url: '{$WP_PROTO}://{HOST.HOST}:{$WP_PORT}{$WPROOT}wp-content/uploads/'
               priority: HIGH
               manual_close: 'YES'
