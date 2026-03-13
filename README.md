@@ -96,10 +96,9 @@ The template uses the following macro:
 | {$WP_PORT} | Port used for monitoring | 443 |
 | {$WPROOT} | WordPress installation path | / |
 
-Example values:
-Example configuration:
+### Example configuration:
 
-###{$WP_PROTO}
+### {$WP_PROTO}
 ```
 https
 ```
@@ -110,14 +109,14 @@ http
 ```
 This macro defines the ** protocol ** of the WordPress HTTP server.
 
-Example configuration:
+### Example configuration:
 
 | Site URL                | Macro Value |
 | ----------------------- | ----------- |
 | **https**://example.com     | https       |
 | **http**://example.com/     | http        |
 
-###{$WP_PORT}
+### {$WP_PORT}
 ```
 443
 ```
@@ -129,14 +128,14 @@ or
 ```
 This macro defines the **port number** of the WordPress HTTP server.
 
-Example configuration:
+### Example configuration:
 
 | Site URL                      | Macro Value |
 | ----------------------------- | ------------ |
 | https://example.com           | 443(defalut) |
 | https://example.com:**8443**/     | 8443         |
 
-###{$WPROOT}
+### {$WPROOT}
 ```
 /
 ```
@@ -149,7 +148,7 @@ or
 
 This macro defines the ** root path** of the WordPress installation.
 
-Example configuration:
+### Example configuration:
 
 | Site URL                | Macro Value |
 | ----------------------- | ----------- |
