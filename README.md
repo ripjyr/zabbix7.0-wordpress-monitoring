@@ -88,12 +88,55 @@ Data collection → Templates → Import
 
 The template uses the following macro:
 
-```
-{$WPROOT}
-```
+{$WP_PROTO} and {$WP_PORT} allow the template to support custom WordPress deployments using non-standard ports or HTTP/HTTPS configurations.
+
+| Macro | Description | Example |
+|------|-------------|--------|
+| {$WP_PROTO} | Protocol used for monitoring | https |
+| {$WP_PORT} | Port used for monitoring | 443 |
+| {$WPROOT} | WordPress installation path | / |
 
 Example values:
+Example configuration:
 
+{$WP_PROTO}
+```
+https
+```
+
+or
+```
+http
+```
+This macro defines the ** protocol ** of the WordPress HTTP server.
+
+Example configuration:
+
+| Site URL                | Macro Value |
+| ----------------------- | ----------- |
+| **https**://example.com     | https       |
+| **http**://example.com/     | http        |
+
+{$WP_PORT}
+```
+443
+```
+
+or
+
+```
+8443
+```
+This macro defines the **port number** of the WordPress HTTP server.
+
+Example configuration:
+
+| Site URL                      | Macro Value |
+| ----------------------------- | ------------ |
+| https://example.com           | 443(defalut) |
+| https://example.com:**8443**/     | 8443         |
+
+{$WPROOT}
 ```
 /
 ```
@@ -104,14 +147,14 @@ or
 /wp/
 ```
 
-This macro defines the root path of the WordPress installation.
+This macro defines the ** root path** of the WordPress installation.
 
 Example configuration:
 
 | Site URL                | Macro Value |
 | ----------------------- | ----------- |
-| https://example.com     | /           |
-| https://example.com/wp/ | /wp/        |
+| https://example.com**/**     | /           |
+| https://example.com**/wp/** | /wp/        |
 
 ---
 
