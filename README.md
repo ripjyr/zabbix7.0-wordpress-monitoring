@@ -90,7 +90,7 @@ The template uses the following macro:
 
 {$WP_PROTO} and {$WP_PORT} allow the template to support custom WordPress deployments using non-standard ports or HTTP/HTTPS configurations.
 
-| Macro | Description | Example |
+| Macro | Description | Default value |
 |------|-------------|--------|
 | {$WP_PROTO} | Protocol used for monitoring | https |
 | {$WP_PORT} | Port used for monitoring | 443 |
@@ -99,7 +99,7 @@ The template uses the following macro:
 Example values:
 Example configuration:
 
-{$WP_PROTO}
+###{$WP_PROTO}
 ```
 https
 ```
@@ -117,7 +117,7 @@ Example configuration:
 | **https**://example.com     | https       |
 | **http**://example.com/     | http        |
 
-{$WP_PORT}
+###{$WP_PORT}
 ```
 443
 ```
@@ -136,7 +136,7 @@ Example configuration:
 | https://example.com           | 443(defalut) |
 | https://example.com:**8443**/     | 8443         |
 
-{$WPROOT}
+###{$WPROOT}
 ```
 /
 ```
@@ -153,8 +153,8 @@ Example configuration:
 
 | Site URL                | Macro Value |
 | ----------------------- | ----------- |
-| https://example.com**/**     | /           |
-| https://example.com**/wp/** | /wp/        |
+| https://example.com/     | /           |
+| https://example.com/wp/ | /wp/        |
 
 ---
 
