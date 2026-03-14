@@ -220,7 +220,7 @@ domain=security
 type=<security_category>
 ```
 
-##Security categories:
+### Security categories:
 
 - attack_surface  
 - information_leak  
