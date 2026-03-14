@@ -2,303 +2,1199 @@ zabbix_export:
   version: '7.0'
 
   template_groups:
-    - uuid: 0d9a5b3e0fbe4b8c9e1a3e92e4e00001
-      name: Templates/Web
+    - uuid: a571c0d144b14fd4a87a9d9b2aa9fcd6
+      name: Templates/Applications
 
   templates:
-    - uuid: 0d9a5b3e0fbe4b8c9e1a3e92e4e00002
+    - uuid: 5cc06540c01442a8b1074951e15e1d70
       template: Template_WordPress_Security_HTTP
       name: Template WordPress Security HTTP
       description: |
-        WordPress external monitoring and security exposure checks.
-
+        WordPress Security & Exposure Monitoring Template.
+        
+        GitHub:
+          https://github.com/ripjyr/zabbix7.0-wordpress-monitoring
+        
         This template detects common WordPress misconfigurations and
         information leaks using HTTP Agent checks.
-
+        
         Checks include:
         - WordPress admin panel exposure
         - WordPress login page exposure
         - WordPress XML-RPC endpoint
         - WordPress REST API availability
-        - user enumeration via REST API
-        - debug log exposure
-        - config backup exposure
+        - WordPress user enumeration via REST API
+        - WordPress debug log exposure
+        - WordPress config backup exposure
         - git repository exposure
-        - install script exposure
+        - WordPress install script exposure
         - WordPress license.txt exposure
         - WordPress version leak via readme.html
         - WordPress version detection via RSS
-        - directory listing exposure in wp-content/uploads
-        Designed for Zabbix 7.x.
+        - directory listing exposure (wp-content/uploads)
+        - WordPress setup config script(setup-config.php) exposure
+        - phpinfo page exposure
+        - backup directory listing
+        - old directory listing
+        - environment configuration file exposure (.env)
+        
+        Compatibility:
+          Zabbix 7.0+
 
       groups:
-        - name: Templates/Web
+        - name: Templates/Applications
 
       macros:
-        - macro: '{$WPROOT}'
+        - macro: '{$WP_ROOT}'
           value: /
-          description: "Wordpress root path (example: / or /wp/)"
+          description: "WordPress root path (example: / or /wp/)"
+
         - macro: '{$WP_PROTO}'
           value: https
           description: 'Protocol used for WordPress monitoring (http or https)'
+
         - macro: '{$WP_PORT}'
           value: '443'
           description: 'Port used for WordPress monitoring'
 
       items:
-
-        - uuid: 023f2c3febc444bcb665eedbcc4dc78a
-          name: WordPress Admin Panel
+        - uuid: ebf623993f734819aaccc06b3031b604
+          name: 'WordPress Admin Panel'
           type: HTTP_AGENT
           key: wordpress.admin.status
           delay: 1d
-          url: '{$WP_PROTO}://{HOST.HOST}:{$WP_PORT}{$WPROOT}wp-admin/'
-          retrieve_mode: HEADERS
+          description: |
+            Purpose
+            Detects whether the WordPress administrative interface (/wp-admin/) is publicly reachable.
+            
+            Remediation
+            Restrict access to the admin interface using IP filtering, VPN, or authentication controls.
+            
+            False Positive
+            Public access to /wp-admin/ is common but may increase attack surface.
+            
+            Reference
+            https://wordpress.org/documentation/article/hardening-wordpress/
           preprocessing:
             - type: REGEX
               parameters:
                 - '(?s).*HTTP/[0-9\.]+\s([0-9]{3})\b(?!.*HTTP/)'
                 - \1
+              error_handler: CUSTOM_ERROR
+              error_handler_params: 'unknown HTTP code need to check url.'
+          url: '{$WP_PROTO}://{HOST.HOST}:{$WP_PORT}{$WP_ROOT}wp-admin/'
+          status_codes: ''
+          retrieve_mode: HEADERS
           triggers:
-            - uuid: b394ae7c359746c58f13d36f6d523d88
+            - uuid: 5fab7b1a04d741c29b79569734bf5e11
               expression: last(/Template_WordPress_Security_HTTP/wordpress.admin.status)=200
-              name: WordPress admin panel exposed
+              name: 'WordPress Admin Panel exposed'
+              url_name: 'View Admin Panel'
+              url: '{$WP_PROTO}://{HOST.HOST}:{$WP_PORT}{$WP_ROOT}wp-admin/'
               priority: WARNING
+              description: |
+                Purpose
+                Detects whether the WordPress administrative interface (/wp-admin/) is publicly reachable.
+                
+                Remediation
+                Restrict access to the admin interface using IP filtering, VPN, or authentication controls.
+                
+                False Positive
+                Public access to /wp-admin/ is common but may increase attack surface.
+                
+                Reference
+                https://wordpress.org/documentation/article/hardening-wordpress/
               manual_close: 'YES'
-
-        - uuid: fb17cc98ed144aed9fbf0f60ae38b6d8
-          name: WordPress Author Enumeration
+        - uuid: f2aa14bcb3a4471db978e47721599b9e
+          name: 'WordPress Admin user'
           type: HTTP_AGENT
-          key: wordpress.author.status
+          key: wordpress.admin.user
           delay: 1d
-          url: '{$WP_PROTO}://{HOST.HOST}:{$WP_PORT}{$WPROOT}?author=1'
-          retrieve_mode: HEADERS
+          description: |
+            Purpose
+            Detects potential user enumeration via the author archive redirect mechanism (?author=1).
+            
+            Remediation
+            Disable author enumeration or restrict access using web server rules or security plugins.
+            
+            False Positive
+            Author archives are enabled by default in many WordPress themes.
+            
+            Reference
+            https://wordpress.org/documentation/article/hardening-wordpress/
           preprocessing:
             - type: REGEX
               parameters:
                 - '(?s).*HTTP/[0-9\.]+\s([0-9]{3})\b(?!.*HTTP/)'
                 - \1
-
-        - uuid: 3f6117fdce1741689e1be994a1830f6a
-          name: WordPress Config Backup
+              error_handler: CUSTOM_ERROR
+              error_handler_params: 'unknown HTTP code need to check url.'
+          url: '{$WP_PROTO}://{HOST.HOST}:{$WP_PORT}{$WP_ROOT}?author=1'
+          status_codes: ''
+          retrieve_mode: HEADERS
+        - uuid: 153c1ab7cec64b8c9b84d252ed7e692a
+          name: 'WordPress Config Backup'
           type: HTTP_AGENT
           key: wordpress.configbak.status
           delay: 1d
-          url: '{$WP_PROTO}://{HOST.HOST}:{$WP_PORT}{$WPROOT}wp-config.php.bak'
-          retrieve_mode: HEADERS
+          description: |
+            Purpose
+            Detects exposed backup copies of the WordPress configuration file (wp-config.php.bak).
+            
+            Remediation
+            Remove backup files or move them outside the web root.
+            
+            False Positive
+            Rare. Configuration backups should not be accessible via HTTP.
+            
+            Reference
+            https://wordpress.org/documentation/article/hardening-wordpress/
           preprocessing:
             - type: REGEX
               parameters:
                 - '(?s).*HTTP/[0-9\.]+\s([0-9]{3})\b(?!.*HTTP/)'
                 - \1
+              error_handler: CUSTOM_ERROR
+              error_handler_params: 'unknown HTTP code need to check url.'
+          url: '{$WP_PROTO}://{HOST.HOST}:{$WP_PORT}{$WP_ROOT}wp-config.php.bak'
+          status_codes: ''
+          retrieve_mode: HEADERS
           triggers:
-            - uuid: 2e90ebb4f0c043cdad0c30f9aee36e7a
+            - uuid: 7e6cdc61eb3048e19775ca674db552fe
               expression: last(/Template_WordPress_Security_HTTP/wordpress.configbak.status)=200
-              name: WordPress config backup exposed
+              name: 'WordPress config backup exposed'
+              url_name: 'View wp-config.php.bak'
+              url: '{$WP_PROTO}://{HOST.HOST}:{$WP_PORT}{$WP_ROOT}wp-config.php.bak'
               priority: HIGH
+              description: |
+                Purpose
+                Detects exposed backup copies of the WordPress configuration file (wp-config.php.bak).
+                
+                Remediation
+                Remove backup files or move them outside the web root.
+                
+                False Positive
+                Rare. Configuration backups should not be accessible via HTTP.
+                
+                Reference
+                https://wordpress.org/documentation/article/hardening-wordpress/
               manual_close: 'YES'
-
-        - uuid: 94c2b7b457b64384b79fb7ab11bb082f
-          name: WordPress Debug Log
+        - uuid: 931525dc701e409d8dd4c7e6eec73429
+          name: 'WordPress Cron'
+          type: HTTP_AGENT
+          key: wordpress.cron.status
+          delay: 1d
+          description: |
+            Purpose
+            Detects whether the WordPress cron endpoint (/wp-cron.php) is accessible.
+            
+            Remediation
+            Consider disabling WP-Cron and replacing it with a system cron job if appropriate.
+            
+            False Positive
+            WP-Cron is normally accessible in default WordPress installations.
+            
+            Reference
+            https://wordpress.org/documentation/article/cron/
+          preprocessing:
+            - type: REGEX
+              parameters:
+                - '(?s).*HTTP/[0-9\.]+\s([0-9]{3})\b(?!.*HTTP/)'
+                - \1
+              error_handler: CUSTOM_ERROR
+              error_handler_params: 'unknown HTTP code need to check url.'
+          url: '{$WP_PROTO}://{HOST.HOST}:{$WP_PORT}{$WP_ROOT}wp-cron.php'
+          status_codes: ''
+          retrieve_mode: HEADERS
+          triggers:
+            - uuid: 8b8523573fc545adb5abfac0d077ac78
+              expression: last(/Template_WordPress_Security_HTTP/wordpress.cron.status)=200
+              name: 'WordPress cron accessible'
+              url_name: 'Check wp-cron.php'
+              url: '{$WP_PROTO}://{HOST.HOST}:{$WP_PORT}{$WP_ROOT}wp-cron.php'
+              status: DISABLED
+              priority: INFO
+              description: |
+                Purpose
+                Detects whether the WordPress cron endpoint (/wp-cron.php) is accessible.
+                
+                Remediation
+                Consider disabling WP-Cron and replacing it with a system cron job if appropriate.
+                
+                False Positive
+                WP-Cron is normally accessible in default WordPress installations.
+                
+                Reference
+                https://wordpress.org/documentation/article/cron/
+              manual_close: 'YES'
+        - uuid: 467fed38501b4ba69b46543168e6cb35
+          name: 'WordPress Debug Log'
           type: HTTP_AGENT
           key: wordpress.debug.status
           delay: 1d
-          url: '{$WP_PROTO}://{HOST.HOST}:{$WP_PORT}{$WPROOT}wp-content/debug.log'
-          retrieve_mode: HEADERS
+          description: |
+            Purpose
+            Detects exposure of the WordPress debug log file (/wp-content/debug.log).
+            
+            Remediation
+            Disable debug logging in production or restrict access to the debug log file.
+            
+            False Positive
+            Rare. Debug logs should not be publicly accessible.
+            
+            Reference
+            https://wordpress.org/documentation/article/debugging-in-wordpress/
           preprocessing:
             - type: REGEX
               parameters:
                 - '(?s).*HTTP/[0-9\.]+\s([0-9]{3})\b(?!.*HTTP/)'
                 - \1
+              error_handler: CUSTOM_ERROR
+              error_handler_params: 'unknown HTTP code need to check url.'
+          url: '{$WP_PROTO}://{HOST.HOST}:{$WP_PORT}{$WP_ROOT}wp-content/debug.log'
+          status_codes: ''
+          retrieve_mode: HEADERS
           triggers:
-            - uuid: bea161417f9f4eb79573da3795ad97ba
+            - uuid: 6872667612b04e24a7220044f718ac95
               expression: last(/Template_WordPress_Security_HTTP/wordpress.debug.status)=200
-              name: WordPress debug log exposed
+              name: 'WordPress debug log exposed'
+              url_name: 'View wp-content/debug.log'
+              url: '{$WP_PROTO}://{HOST.HOST}:{$WP_PORT}{$WP_ROOT}wp-content/debug.log'
               priority: HIGH
+              description: |
+                Purpose
+                Detects exposure of the WordPress debug log file (/wp-content/debug.log).
+                
+                Remediation
+                Disable debug logging in production or restrict access to the debug log file.
+                
+                False Positive
+                Rare. Debug logs should not be publicly accessible.
+                
+                Reference
+                https://wordpress.org/documentation/article/debugging-in-wordpress/
               manual_close: 'YES'
-
-        - uuid: 98e57b79725a419aad74186d80eefa9c
-          name: WordPress Git Exposure
+        - uuid: 4b2e90a7ae98475495b37378bedefc15
+          name: 'WordPress Backup "backup" directory listing check'
           type: HTTP_AGENT
-          key: wordpress.git.status
-          delay: 1d
-          url: '{$WP_PROTO}://{HOST.HOST}:{$WP_PORT}{$WPROOT}.git/'
-          retrieve_mode: HEADERS
-          preprocessing:
-            - type: REGEX
-              parameters:
-                - '(?s).*HTTP/[0-9\.]+\s([0-9]{3})\b(?!.*HTTP/)'
-                - \1
-          triggers:
-            - uuid: 7eb3925254ff46ed923eca0a6e46e14f
-              expression: last(/Template_WordPress_Security_HTTP/wordpress.git.status)=200
-              name: WordPress git directory exposed
-              priority: HIGH
-              manual_close: 'YES'
-
-        - uuid: aa5dceedeaa342b2a12cff412ecffa26
-          name: WordPress Install Script
-          type: HTTP_AGENT
-          key: wordpress.install.status
-          delay: 1d
-          url: '{$WP_PROTO}://{HOST.HOST}:{$WP_PORT}{$WPROOT}wp-admin/install.php'
-          retrieve_mode: HEADERS
-          preprocessing:
-            - type: REGEX
-              parameters:
-                - '(?s).*HTTP/[0-9\.]+\s([0-9]{3})\b(?!.*HTTP/)'
-                - \1
-          triggers:
-            - uuid: 43888b04e65045c19d041fb6ac86e745
-              expression: last(/Template_WordPress_Security_HTTP/wordpress.install.status)=200
-              name: WordPress install script exposed
-              priority: HIGH
-              manual_close: 'YES'
-
-        - uuid: b153f19e0ab64bf8815d87b9055e6110
-          name: WordPress Login Page
-          type: HTTP_AGENT
-          key: wordpress.login.status
-          delay: 1d
-          url: '{$WP_PROTO}://{HOST.HOST}:{$WP_PORT}{$WPROOT}wp-login.php'
-          retrieve_mode: HEADERS
-          preprocessing:
-            - type: REGEX
-              parameters:
-                - '(?s).*HTTP/[0-9\.]+\s([0-9]{3})\b(?!.*HTTP/)'
-                - \1
-          triggers:
-            - uuid: d39bf637f95a4dcfa1e6402128ea3a75
-              expression: last(/Template_WordPress_Security_HTTP/wordpress.login.status)=200
-              name: WordPress login page accessible
-              priority: INFO
-              manual_close: 'YES'
-
-        - uuid: 72867a87cfc04ba4a02ddadab9d2ac61
-          name: WordPress REST API
-          type: HTTP_AGENT
-          key: wordpress.rest.status
-          delay: 1d
-          url: '{$WP_PROTO}://{HOST.HOST}:{$WP_PORT}{$WPROOT}wp-json/'
-          retrieve_mode: HEADERS
-          preprocessing:
-            - type: REGEX
-              parameters:
-                - '(?s).*HTTP/[0-9\.]+\s([0-9]{3})\b(?!.*HTTP/)'
-                - \1
-
-        - uuid: f3409caef60e4674ba14e00de2252d0c
-          name: WordPress Users API
-          type: HTTP_AGENT
-          key: wordpress.users.body
+          key: wordpress.dirlisting.backup
           delay: 1d
           value_type: TEXT
           trends: '0'
-          url: '{$WP_PROTO}://{HOST.HOST}:{$WP_PORT}{$WPROOT}wp-json/wp/v2/users'
+          description: |
+            Purpose
+            Detects directory listing exposure in the /backup/ directory.
+            
+            Backup directories are sometimes left in the web root during
+            site migrations or manual backup operations.
+            
+            If directory listing is enabled, attackers may be able to download
+            backup archives, database dumps, or old copies of the website.
+            
+            Remediation
+            Remove backup directories from the web root or disable directory listing
+            in the web server configuration.
+            
+            Examples:
+            Apache: Options -Indexes
+            Nginx: autoindex off
+            
+            False Positive
+            Rare. Backup directories should normally not be publicly accessible.
+            
+            Reference
+            https://owasp.org/www-project-top-ten/
+          url: '{$WP_PROTO}://{HOST.HOST}:{$WP_PORT}{$WP_ROOT}backup/'
+          status_codes: ''
           triggers:
-            - uuid: 47c13fba631d4cdfa18c5750a76afe79
-              expression: 'find(/Template_WordPress_Security_HTTP/wordpress.users.body,,"like","name")=1'
-              name: WordPress user enumeration possible
-              priority: HIGH
+            - uuid: bb35c443f3be435ca7c09e65aacec364
+              expression: 'find(/Template_WordPress_Security_HTTP/wordpress.dirlisting.backup,,"like","Index of")=1 and find(/Template_WordPress_Security_HTTP/wordpress.dirlisting.backup,,"like","Parent Directory")=1'
+              name: 'WordPress Backup directory(backup) listing enabled'
+              url_name: 'Check backup/ path'
+              url: '{$WP_PROTO}://{HOST.HOST}:{$WP_PORT}{$WP_ROOT}backup/'
+              priority: INFO
+              description: |
+                Purpose
+                Detects directory listing exposure in the /backup/ directory.
+                
+                Backup directories are sometimes left in the web root during
+                site migrations or manual backup operations.
+                
+                If directory listing is enabled, attackers may be able to download
+                backup archives, database dumps, or old copies of the website.
+                
+                Remediation
+                Remove backup directories from the web root or disable directory listing
+                in the web server configuration.
+                
+                Examples:
+                Apache: Options -Indexes
+                Nginx: autoindex off
+                
+                False Positive
+                Rare. Backup directories should normally not be publicly accessible.
+                
+                Reference
+                https://owasp.org/www-project-top-ten/
               manual_close: 'YES'
-
-        - uuid: 1a09e0dc39144a658aa96d949041c268
-          name: WordPress XMLRPC
+        - uuid: e4a8f957578b4eefa22cd27acfe16e76
+          name: 'WordPress Backup "old" directory listing check'
           type: HTTP_AGENT
-          key: wordpress.xmlrpc.status
+          key: wordpress.dirlisting.old
           delay: 1d
-          url: '{$WP_PROTO}://{HOST.HOST}:{$WP_PORT}{$WPROOT}xmlrpc.php'
-          retrieve_mode: HEADERS
-          preprocessing:
-            - type: REGEX
-              parameters:
-                - '(?s).*HTTP/[0-9\.]+\s([0-9]{3})\b(?!.*HTTP/)'
-                - \1
-
-        - uuid: 1a7c3ea78dd54f90a697417a9453b30a
-          name: WordPress Version (RSS)
-          type: HTTP_AGENT
-          key: wordpress.version.feed
-          delay: 1d
-          value_type: CHAR
+          value_type: TEXT
           trends: '0'
-          url: '{$WP_PROTO}://{HOST.HOST}:{$WP_PORT}{$WPROOT}feed/'
-          preprocessing:
-            - type: REGEX
-              parameters:
-                - '<generator>.*\?v=([0-9\.]+)</generator>'
-                - \1
-          triggers:
-            - uuid: 2925fb9eff9c42b986cc815bb4196a3a
-              expression: change(/WordpressCheck/wordpress.version.feed)<>0
-              name: 'WordPress version changed'
-              opdata: 'WordPress version changed from {ITEM.PREVVALUE1} to {ITEM.LASTVALUE1}. Check changelog.'
-              url_name: '{$WP_PROTO}://{HOST.HOST}:{$WP_PORT}{$WPROOT}'
-              url: '{$WP_PROTO}://{HOST.HOST}:{$WP_PORT}{$WPROOT}'
-              priority: INFO
-              manual_close: 'YES'
-
-        - uuid: 8723d85eaa6a4512ae5c4e515e759add
-          name: 'WordPress License'
-          type: HTTP_AGENT
-          key: wordpress.license.status
-          delay: 1d
-          preprocessing:
-            - type: REGEX
-              parameters:
-                - '(?s).*HTTP/[0-9\.]+\s([0-9]{3})\b(?!.*HTTP/)'
-                - \1
-              error_handler: CUSTOM_ERROR
-              error_handler_params: 'unknown HTTP code need to check url.'
-          url: '{$WP_PROTO}://{HOST.HOST}:{$WP_PORT}{$WPROOT}license.txt'
+          description: |
+            Purpose
+            Detects directory listing exposure in the /old/ directory.
+            
+            The /old/ directory is commonly used during website migrations
+            to keep previous versions of the site. If exposed, it may contain
+            complete copies of the WordPress installation including
+            configuration files, database dumps, or outdated plugins.
+            
+            Remediation
+            Remove old site copies from the web root or restrict access
+            to the directory.
+            
+            False Positive
+            Rare. Old site copies should not normally be accessible
+            from the internet.
+            
+            Reference
+            https://owasp.org/www-project-top-ten/
+          url: '{$WP_PROTO}://{HOST.HOST}:{$WP_PORT}{$WP_ROOT}old/'
           status_codes: ''
-          retrieve_mode: HEADERS
           triggers:
-            - uuid: 1f43a0bb7f6e4a6d92a9d43f0a6c14d2
-              expression: last(/WordpressCheck/wordpress.license.status)=200
-              name: 'WordPress license.txt exposed'
-              url_name: '{$WP_PROTO}://{HOST.HOST}:{$WP_PORT}{$WPROOT}license.txt'
-              url: '{$WP_PROTO}://{HOST.HOST}:{$WP_PORT}{$WPROOT}license.txt'
+            - uuid: 431657826df34cf5bcb74bd469d0c5e1
+              expression: 'find(/Template_WordPress_Security_HTTP/wordpress.dirlisting.old,,"like","Index of")=1 and find(/Template_WordPress_Security_HTTP/wordpress.dirlisting.old,,"like","Parent Directory")=1'
+              name: 'WordPress Backup directory(old) listing enabled'
+              url_name: 'Check old/ path'
+              url: '{$WP_PROTO}://{HOST.HOST}:{$WP_PORT}{$WP_ROOT}old/'
               priority: INFO
+              description: |
+                Purpose
+                Detects directory listing exposure in the /old/ directory.
+                
+                The /old/ directory is commonly used during website migrations
+                to keep previous versions of the site. If exposed, it may contain
+                complete copies of the WordPress installation including
+                configuration files, database dumps, or outdated plugins.
+                
+                Remediation
+                Remove old site copies from the web root or restrict access
+                to the directory.
+                
+                False Positive
+                Rare. Old site copies should not normally be accessible
+                from the internet.
+                
+                Reference
+                https://owasp.org/www-project-top-ten/
               manual_close: 'YES'
-
-        - uuid: 75aadb8b3d224c1bb02b0dc10faf017b
-          name: 'WordPress Readme'
-          type: HTTP_AGENT
-          key: wordpress.readme.status
-          delay: 1d
-          preprocessing:
-            - type: REGEX
-              parameters:
-                - '(?s).*HTTP/[0-9\.]+\s([0-9]{3})\b(?!.*HTTP/)'
-                - \1
-              error_handler: CUSTOM_ERROR
-              error_handler_params: 'unknown HTTP code need to check url.'
-          url: '{$WP_PROTO}://{HOST.HOST}:{$WP_PORT}{$WPROOT}readme.html'
-          status_codes: ''
-          retrieve_mode: HEADERS
-          triggers:
-            - uuid: 7e1802ab9b16430ab442a6b5a28013cf
-              expression: last(/WordpressCheck/wordpress.readme.status)=200
-              name: 'WordPress version leak via readme.html'
-              url_name: '{$WP_PROTO}://{HOST.HOST}:{$WP_PORT}{$WPROOT}readme.html'
-              url: '{$WP_PROTO}://{HOST.HOST}:{$WP_PORT}{$WPROOT}readme.html'
-              priority: WARNING
-              manual_close: 'YES'
-        - uuid: 24e61dcac68a44b280e4fffa653ae6a9
-          name: 'WordPress directory listing wp-content/uploads'
+        - uuid: e770011216fe4812b99fdda0bdbe283a
+          name: 'WordPress directory listing'
           type: HTTP_AGENT
           key: wordpress.dirlisting.wpcontent
           delay: 1d
           value_type: TEXT
           trends: '0'
-          url: '{$WP_PROTO}://{HOST.HOST}:{$WP_PORT}{$WPROOT}wp-content/uploads/'
+          description: |
+            Purpose
+            Detects directory listing exposure in /wp-content/uploads/.
+            
+            Remediation
+            Disable directory listing in the web server configuration.
+            
+            Examples:
+            Apache: Options -Indexes
+            Nginx: autoindex off
+            
+            False Positive
+            Rare. Directory listing is usually unintended.
+            
+            Reference
+            https://owasp.org/www-project-top-ten/
+          url: '{$WP_PROTO}://{HOST.HOST}:{$WP_PORT}{$WP_ROOT}wp-content/uploads/'
           status_codes: ''
           triggers:
-            - uuid: f3ec35a512a04110ac122d31268c4331
-              expression: 'find(/WordpressCheck/wordpress.dirlisting.wpcontent,,"like","Index of")=1 and find(/WordpressCheck/wordpress.dirlisting.wpcontent,,"like","Parent Directory")=1'
-              name: 'WordPress directory listing enabled (wp-content/uploads)'
-              url_name: 'Open directory'
-              url: '{$WP_PROTO}://{HOST.HOST}:{$WP_PORT}{$WPROOT}wp-content/uploads/'
-              priority: HIGH
+            - uuid: 31662a947eb94efe99831d1438b1788b
+              expression: 'find(/Template_WordPress_Security_HTTP/wordpress.dirlisting.wpcontent,,"like","Index of")=1 and find(/Template_WordPress_Security_HTTP/wordpress.dirlisting.wpcontent,,"like","Parent Directory")=1'
+              name: 'WordPress directory listing enabled'
+              url_name: 'Check wp-content/uploads/ response'
+              url: '{$WP_PROTO}://{HOST.HOST}:{$WP_PORT}{$WP_ROOT}wp-content/uploads/'
+              priority: WARNING
+              description: |
+                Purpose
+                Detects directory listing exposure in /wp-content/uploads/.
+                
+                Remediation
+                Disable directory listing in the web server configuration.
+                
+                Examples:
+                Apache: Options -Indexes
+                Nginx: autoindex off
+                
+                False Positive
+                Rare. Directory listing is usually unintended.
+                
+                Reference
+                https://owasp.org/www-project-top-ten/
               manual_close: 'YES'
+        - uuid: 5a83f31981f84942b0d08bc45910cd4c
+          name: 'WordPress Git Exposure'
+          type: HTTP_AGENT
+          key: wordpress.git.status
+          delay: 1d
+          description: |
+            Purpose
+            Detects exposure of a Git repository directory (.git/) within the web root.
+            
+            Remediation
+            Remove the repository from the web root or restrict access via web server configuration.
+            
+            False Positive
+            Rare. Git repositories should never be publicly accessible.
+            
+            Reference
+            https://owasp.org/www-project-top-ten/
+          preprocessing:
+            - type: REGEX
+              parameters:
+                - '(?s).*HTTP/[0-9\.]+\s([0-9]{3})\b(?!.*HTTP/)'
+                - \1
+              error_handler: CUSTOM_ERROR
+              error_handler_params: 'unknown HTTP code need to check url.'
+          url: '{$WP_PROTO}://{HOST.HOST}:{$WP_PORT}{$WP_ROOT}.git/'
+          status_codes: ''
+          retrieve_mode: HEADERS
+          triggers:
+            - uuid: 6a118c8210fd4574b261673c357f269a
+              expression: last(/Template_WordPress_Security_HTTP/wordpress.git.status)=200
+              name: 'WordPress git path exposed'
+              url_name: 'Check .git/ path'
+              url: '{$WP_PROTO}://{HOST.HOST}:{$WP_PORT}{$WP_ROOT}.git/'
+              priority: HIGH
+              description: |
+                Purpose
+                Detects exposure of a Git repository directory (.git/) within the web root.
+                
+                Remediation
+                Remove the repository from the web root or restrict access via web server configuration.
+                
+                False Positive
+                Rare. Git repositories should never be publicly accessible.
+                
+                Reference
+                https://owasp.org/www-project-top-ten/
+              manual_close: 'YES'
+        - uuid: f6cbe4ea7bc54b6f94caad294efc8d96
+          name: 'WordPress PHP Information info.php Exposure'
+          type: HTTP_AGENT
+          key: wordpress.infophp.status
+          delay: 1d
+          description: |
+            Purpose
+            Detects exposure of a PHP information page such as phpinfo.php or info.php.
+            
+            These pages display detailed information about the PHP environment,
+            including PHP version, loaded modules, filesystem paths,
+            and server configuration.
+            
+            This information can assist attackers in identifying vulnerabilities
+            or planning targeted attacks.
+            
+            Remediation
+            Remove the phpinfo script from the web root after debugging
+            or restrict access to trusted IP addresses.
+            
+            False Positive
+            Rare. phpinfo pages are typically only used during development
+            or troubleshooting.
+            
+            Reference
+            https://www.php.net/manual/en/function.phpinfo.php
+          preprocessing:
+            - type: REGEX
+              parameters:
+                - '(?s).*HTTP/[0-9\.]+\s([0-9]{3})\b(?!.*HTTP/)'
+                - \1
+              error_handler: CUSTOM_ERROR
+              error_handler_params: 'unknown HTTP code need to check url.'
+          url: '{$WP_PROTO}://{HOST.HOST}:{$WP_PORT}{$WP_ROOT}info.php'
+          status_codes: ''
+          retrieve_mode: HEADERS
+          triggers:
+            - uuid: b1dc953376514c5dafa4057ceb626d1b
+              expression: last(/Template_WordPress_Security_HTTP/wordpress.infophp.status)=200
+              name: 'WordPress phpinfo page exposed (info.php)'
+              url_name: 'View info.php'
+              url: '{$WP_PROTO}://{HOST.HOST}:{$WP_PORT}{$WP_ROOT}info.php'
+              priority: INFO
+              description: |
+                Purpose
+                Detects exposure of a PHP information page such as phpinfo.php or info.php.
+                
+                These pages display detailed information about the PHP environment,
+                including PHP version, loaded modules, filesystem paths,
+                and server configuration.
+                
+                This information can assist attackers in identifying vulnerabilities
+                or planning targeted attacks.
+                
+                Remediation
+                Remove the phpinfo script from the web root after debugging
+                or restrict access to trusted IP addresses.
+                
+                False Positive
+                Rare. phpinfo pages are typically only used during development
+                or troubleshooting.
+                
+                Reference
+                https://www.php.net/manual/en/function.phpinfo.php
+              manual_close: 'YES'
+        - uuid: badbfb27cd4643fbb6597c2f8686534f
+          name: 'WordPress Install Script'
+          type: HTTP_AGENT
+          key: wordpress.install.status
+          delay: 1d
+          description: |
+            Purpose
+            Detects whether the WordPress installation script (/wp-admin/install.php) is accessible.
+            
+            This may indicate that the WordPress site is in an uninitialized or re-installable state,
+            which can occur after incomplete migrations, database failures, or missing configuration.
+            
+            Remediation
+            Verify that the WordPress database and configuration are properly installed.
+            Restrict access to installation scripts and remove them if not required.
+            
+            False Positive
+            Expected only during the initial installation process.
+            
+            Reference
+            https://wordpress.org/documentation/article/installing-wordpress/
+          preprocessing:
+            - type: REGEX
+              parameters:
+                - '(?s).*HTTP/[0-9\.]+\s([0-9]{3})\b(?!.*HTTP/)'
+                - \1
+              error_handler: CUSTOM_ERROR
+              error_handler_params: 'unknown HTTP code need to check url.'
+          url: '{$WP_PROTO}://{HOST.HOST}:{$WP_PORT}{$WP_ROOT}wp-admin/install.php'
+          status_codes: ''
+          retrieve_mode: HEADERS
+          triggers:
+            - uuid: af95e013377949d9a0c3cbeece8253df
+              expression: last(/Template_WordPress_Security_HTTP/wordpress.install.status)=200
+              name: 'WordPress install script exposed'
+              url_name: 'View wp-admin/install.php'
+              url: '{$WP_PROTO}://{HOST.HOST}:{$WP_PORT}{$WP_ROOT}wp-admin/install.php'
+              priority: HIGH
+              description: |
+                Purpose
+                Detects whether the WordPress installation script (/wp-admin/install.php) is accessible.
+                
+                This may indicate that the WordPress site is in an uninitialized or re-installable state,
+                which can occur after incomplete migrations, database failures, or missing configuration.
+                
+                Remediation
+                Verify that the WordPress database and configuration are properly installed.
+                Restrict access to installation scripts and remove them if not required.
+                
+                False Positive
+                Expected only during the initial installation process.
+                
+                Reference
+                https://wordpress.org/documentation/article/installing-wordpress/
+              manual_close: 'YES'
+        - uuid: a7b71285520946df978dcd1315039673
+          name: 'WordPress License'
+          type: HTTP_AGENT
+          key: wordpress.license.status
+          delay: 1d
+          description: |
+            Purpose
+            Detects exposure of the WordPress license file (license.txt).
+            
+            Remediation
+            Consider removing the file if information disclosure is a concern.
+            
+            False Positive
+            This file is included in standard WordPress installations and may be intentionally left accessible.
+            
+            Reference
+            https://wordpress.org/download/
+          preprocessing:
+            - type: REGEX
+              parameters:
+                - '(?s).*HTTP/[0-9\.]+\s([0-9]{3})\b(?!.*HTTP/)'
+                - \1
+              error_handler: CUSTOM_ERROR
+              error_handler_params: 'unknown HTTP code need to check url.'
+          url: '{$WP_PROTO}://{HOST.HOST}:{$WP_PORT}{$WP_ROOT}license.txt'
+          status_codes: ''
+          retrieve_mode: HEADERS
+          triggers:
+            - uuid: 57df5ba0b6fa425aa3392dff81e309fb
+              expression: last(/Template_WordPress_Security_HTTP/wordpress.license.status)=200
+              name: 'WordPress License exist'
+              url_name: 'View license.txt'
+              url: '{$WP_PROTO}://{HOST.HOST}:{$WP_PORT}{$WP_ROOT}license.txt'
+              priority: INFO
+              description: |
+                Purpose
+                Detects exposure of the WordPress license file (license.txt).
+                
+                Remediation
+                Consider removing the file if information disclosure is a concern.
+                
+                False Positive
+                This file is included in standard WordPress installations and may be intentionally left accessible.
+                
+                Reference
+                https://wordpress.org/download/
+              manual_close: 'YES'
+        - uuid: dc24b9686306481288884674982759cd
+          name: 'WordPress Login'
+          type: HTTP_AGENT
+          key: wordpress.login.status
+          delay: 1d
+          description: |
+            Purpose
+            Detects whether the WordPress login page (/wp-login.php) is publicly accessible.
+            
+            Remediation
+            Consider restricting access via IP filtering, CAPTCHA, or login protection plugins.
+            
+            False Positive
+            Public login pages are normal in many WordPress deployments.
+            
+            Reference
+            https://wordpress.org/documentation/article/hardening-wordpress/
+          preprocessing:
+            - type: REGEX
+              parameters:
+                - '(?s).*HTTP/[0-9\.]+\s([0-9]{3})\b(?!.*HTTP/)'
+                - \1
+              error_handler: CUSTOM_ERROR
+              error_handler_params: 'unknown HTTP code need to check url.'
+          url: '{$WP_PROTO}://{HOST.HOST}:{$WP_PORT}{$WP_ROOT}wp-login.php'
+          status_codes: ''
+          retrieve_mode: HEADERS
+          triggers:
+            - uuid: 31757c05ffee4043baa6e14083edffa3
+              expression: last(/Template_WordPress_Security_HTTP/wordpress.login.status)=200
+              name: 'WordPress login enabled'
+              url_name: 'View wp-login.php'
+              url: '{$WP_PROTO}://{HOST.HOST}:{$WP_PORT}{$WP_ROOT}wp-login.php'
+              priority: INFO
+              description: |
+                Purpose
+                Detects whether the WordPress login page (/wp-login.php) is publicly accessible.
+                
+                Remediation
+                Consider restricting access via IP filtering, CAPTCHA, or login protection plugins.
+                
+                False Positive
+                Public login pages are normal in many WordPress deployments.
+                
+                Reference
+                https://wordpress.org/documentation/article/hardening-wordpress/
+              manual_close: 'YES'
+        - uuid: 5ca4eeeb1264479d93a5851819931f8f
+          name: 'WordPress PHP Information phpInfo Exposure'
+          type: HTTP_AGENT
+          key: wordpress.phpinfo.status
+          delay: 1d
+          description: |
+            Purpose
+            Detects exposure of a PHP information page such as phpinfo.php or info.php.
+            
+            These pages display detailed information about the PHP environment,
+            including PHP version, loaded modules, filesystem paths,
+            and server configuration.
+            
+            This information can assist attackers in identifying vulnerabilities
+            or planning targeted attacks.
+            
+            Remediation
+            Remove the phpinfo script from the web root after debugging
+            or restrict access to trusted IP addresses.
+            
+            False Positive
+            Rare. phpinfo pages are typically only used during development
+            or troubleshooting.
+            
+            Reference
+            https://www.php.net/manual/en/function.phpinfo.php
+          preprocessing:
+            - type: REGEX
+              parameters:
+                - '(?s).*HTTP/[0-9\.]+\s([0-9]{3})\b(?!.*HTTP/)'
+                - \1
+              error_handler: CUSTOM_ERROR
+              error_handler_params: 'unknown HTTP code need to check url.'
+          url: '{$WP_PROTO}://{HOST.HOST}:{$WP_PORT}{$WP_ROOT}phpinfo.php'
+          status_codes: ''
+          retrieve_mode: HEADERS
+          triggers:
+            - uuid: 8fdbd9e9947e4f27bbd07d02f2754e71
+              expression: last(/Template_WordPress_Security_HTTP/wordpress.phpinfo.status)=200
+              name: 'WordPress phpinfo page exposed (phpinfo.php)'
+              url_name: 'View phpinfo.php'
+              url: '{$WP_PROTO}://{HOST.HOST}:{$WP_PORT}{$WP_ROOT}phpinfo.php'
+              priority: INFO
+              description: |
+                Purpose
+                Detects exposure of a PHP information page such as phpinfo.php or info.php.
+                
+                These pages display detailed information about the PHP environment,
+                including PHP version, loaded modules, filesystem paths,
+                and server configuration.
+                
+                This information can assist attackers in identifying vulnerabilities
+                or planning targeted attacks.
+                
+                Remediation
+                Remove the phpinfo script from the web root after debugging
+                or restrict access to trusted IP addresses.
+                
+                False Positive
+                Rare. phpinfo pages are typically only used during development
+                or troubleshooting.
+                
+                Reference
+                https://www.php.net/manual/en/function.phpinfo.php
+              manual_close: 'YES'
+        - uuid: 9b91b5af72304c87b53ef36ca7876a83
+          name: 'WordPress Readme'
+          type: HTTP_AGENT
+          key: wordpress.readme.status
+          delay: 1d
+          description: |
+            Purpose
+            Detects exposure of the WordPress readme.html file which may disclose the WordPress version.
+            
+            Remediation
+            Remove the readme.html file to reduce version information disclosure.
+            
+            False Positive
+            Some administrators intentionally keep this file for documentation.
+            
+            Reference
+            https://wordpress.org/documentation/article/hardening-wordpress/
+          preprocessing:
+            - type: REGEX
+              parameters:
+                - '(?s).*HTTP/[0-9\.]+\s([0-9]{3})\b(?!.*HTTP/)'
+                - \1
+              error_handler: CUSTOM_ERROR
+              error_handler_params: 'unknown HTTP code need to check url.'
+          url: '{$WP_PROTO}://{HOST.HOST}:{$WP_PORT}{$WP_ROOT}readme.html'
+          status_codes: ''
+          retrieve_mode: HEADERS
+          triggers:
+            - uuid: 53a1dff2aa214460bfd612a2ff68cb8c
+              expression: last(/Template_WordPress_Security_HTTP/wordpress.readme.status)=200
+              name: 'WordPress version leak via readme.html'
+              url_name: 'View readme.html'
+              url: '{$WP_PROTO}://{HOST.HOST}:{$WP_PORT}{$WP_ROOT}readme.html'
+              priority: INFO
+              description: |
+                Purpose
+                Detects exposure of the WordPress readme.html file which may disclose the WordPress version.
+                
+                Remediation
+                Remove the readme.html file to reduce version information disclosure.
+                
+                False Positive
+                Some administrators intentionally keep this file for documentation.
+                
+                Reference
+                https://wordpress.org/documentation/article/hardening-wordpress/
+              manual_close: 'YES'
+        - uuid: 13e2046e1ac546c0963a92f081bff3a4
+          name: 'WordPress REST API'
+          type: HTTP_AGENT
+          key: wordpress.rest.status
+          delay: 1d
+          description: |
+            Purpose
+            Detects whether the WordPress REST API endpoint (/wp-json/) is publicly accessible.
+            
+            Remediation
+            Restrict REST API access if not required, or limit sensitive endpoints.
+            
+            False Positive
+            The REST API is enabled by default in modern WordPress installations.
+            
+            Reference
+            https://developer.wordpress.org/rest-api/
+          preprocessing:
+            - type: REGEX
+              parameters:
+                - '(?s).*HTTP/[0-9\.]+\s([0-9]{3})\b(?!.*HTTP/)'
+                - \1
+              error_handler: CUSTOM_ERROR
+              error_handler_params: 'unknown HTTP code need to check url.'
+          url: '{$WP_PROTO}://{HOST.HOST}:{$WP_PORT}{$WP_ROOT}wp-json/'
+          status_codes: ''
+          retrieve_mode: HEADERS
+          triggers:
+            - uuid: 3b024be0755a4a9fb6bb4c08f1dd5b76
+              expression: last(/Template_WordPress_Security_HTTP/wordpress.rest.status)=200
+              name: 'WordPress REST API exposed'
+              url_name: 'Check wp-json/'
+              url: '{$WP_PROTO}://{HOST.HOST}:{$WP_PORT}{$WP_ROOT}wp-json/'
+              priority: WARNING
+              description: |
+                Purpose
+                Detects whether the WordPress REST API endpoint (/wp-json/) is publicly accessible.
+                
+                Remediation
+                Restrict REST API access if not required, or limit sensitive endpoints.
+                
+                False Positive
+                The REST API is enabled by default in modern WordPress installations.
+                
+                Reference
+                https://developer.wordpress.org/rest-api/
+              manual_close: 'YES'
+        - uuid: 55e8268158dd4da3a1e48cdb6af91d52
+          name: 'WordPress setup-config.php'
+          type: HTTP_AGENT
+          key: wordpress.setup.config
+          delay: 1d
+          description: |
+            Purpose
+            Detects whether the WordPress configuration setup script (/wp-admin/setup-config.php) is accessible.
+            
+            This may indicate that the WordPress configuration file is missing or that the site has entered
+            a setup state, which can occur after incomplete server migrations or configuration loss.
+            
+            Remediation
+            Ensure that wp-config.php exists and that the WordPress installation is fully configured.
+            
+            False Positive
+            Expected only during the initial setup of WordPress.
+            
+            Reference
+            https://wordpress.org/documentation/article/installing-wordpress/
+          preprocessing:
+            - type: REGEX
+              parameters:
+                - '(?s).*HTTP/[0-9\.]+\s([0-9]{3})\b(?!.*HTTP/)'
+                - \1
+              error_handler: CUSTOM_ERROR
+              error_handler_params: 'unknown HTTP code need to check url.'
+          url: '{$WP_PROTO}://{HOST.HOST}:{$WP_PORT}{$WP_ROOT}wp-admin/setup-config.php'
+          status_codes: ''
+          retrieve_mode: HEADERS
+          triggers:
+            - uuid: 4ff59fffe3e4402d85304946dc78a91b
+              expression: last(/Template_WordPress_Security_HTTP/wordpress.setup.config)=200
+              name: 'WordPress setup-config.php exposed'
+              url_name: 'View wp-admin/setup-config.php'
+              url: '{$WP_PROTO}://{HOST.HOST}:{$WP_PORT}{$WP_ROOT}wp-admin/setup-config.php'
+              priority: HIGH
+              description: |
+                Purpose
+                Detects whether the WordPress configuration setup script (/wp-admin/setup-config.php) is accessible.
+                
+                This may indicate that the WordPress configuration file is missing or that the site has entered
+                a setup state, which can occur after incomplete server migrations or configuration loss.
+                
+                Remediation
+                Ensure that wp-config.php exists and that the WordPress installation is fully configured.
+                
+                False Positive
+                Expected only during the initial setup of WordPress.
+                
+                Reference
+                https://wordpress.org/documentation/article/installing-wordpress/
+              manual_close: 'YES'
+        - uuid: 301fb41973d44f2e976687ba094a823b
+          name: 'WordPress Users API'
+          type: HTTP_AGENT
+          key: wordpress.users.body
+          delay: 1d
+          value_type: TEXT
+          trends: '0'
+          description: |
+            Purpose
+            Detects exposure of WordPress user information via the REST API endpoint (/wp-json/wp/v2/users).
+            
+            Remediation
+            Disable or restrict user enumeration through REST API configuration or security plugins.
+            
+            False Positive
+            Some WordPress configurations intentionally expose author information.
+            
+            Reference
+            https://developer.wordpress.org/rest-api/reference/users/
+          url: '{$WP_PROTO}://{HOST.HOST}:{$WP_PORT}{$WP_ROOT}wp-json/wp/v2/users'
+          status_codes: ''
+          triggers:
+            - uuid: 55de8141b984432bb32ef9fecc514ecd
+              expression: 'find(/Template_WordPress_Security_HTTP/wordpress.users.body,,"like","name")=1'
+              name: 'WordPress user enumeration possible'
+              url_name: 'View wp-json/wp/v2/users'
+              url: '{$WP_PROTO}://{HOST.HOST}:{$WP_PORT}{$WP_ROOT}wp-json/wp/v2/users'
+              priority: HIGH
+              description: |
+                Purpose
+                Detects exposure of WordPress user information via the REST API endpoint (/wp-json/wp/v2/users).
+                
+                Remediation
+                Disable or restrict user enumeration through REST API configuration or security plugins.
+                
+                False Positive
+                Some WordPress configurations intentionally expose author information.
+                
+                Reference
+                https://developer.wordpress.org/rest-api/reference/users/
+              manual_close: 'YES'
+        - uuid: 47626473a36b4248ae3db2ea9cfaf803
+          name: 'WordPress Version (RSS)'
+          type: HTTP_AGENT
+          key: wordpress.version.feed
+          delay: 1d
+          value_type: CHAR
+          trends: '0'
+          description: |
+            Purpose
+            Extracts WordPress version information from the RSS feed generator tag.
+            
+            Remediation
+            Consider hiding the WordPress version to reduce information disclosure.
+            
+            False Positive
+            WordPress commonly exposes this information by default.
+            
+            Reference
+            https://wordpress.org/documentation/article/hardening-wordpress/
+          preprocessing:
+            - type: REGEX
+              parameters:
+                - '<generator>.*\?v=([0-9\.]+)</generator>'
+                - \1
+              error_handler: CUSTOM_ERROR
+              error_handler_params: 'No version in feed.'
+          url: '{$WP_PROTO}://{HOST.HOST}:{$WP_PORT}{$WP_ROOT}feed/'
+          triggers:
+            - uuid: abc5bfb00ca943cbb7becae5ff274371
+              expression: change(/Template_WordPress_Security_HTTP/wordpress.version.feed)<>0
+              name: 'WordPress version changed'
+              opdata: 'WordPress version changed from {ITEM.PREVVALUE1} to {ITEM.LASTVALUE1}. Check changelog.'
+              url_name: 'Check version'
+              url: '{$WP_PROTO}://{HOST.HOST}:{$WP_PORT}{$WP_ROOT}feed/'
+              priority: INFO
+              description: |
+                Purpose
+                Detects a change in the WordPress version based on RSS feed information.
+                
+                Remediation
+                Verify that the update was intentional and review WordPress release notes.
+                
+                False Positive
+                Occurs whenever WordPress is upgraded or downgraded.
+                
+                Reference
+                https://wordpress.org/news/category/releases/
+              manual_close: 'YES'
+        - uuid: 1158195659264d5c94eaa4454d8f4705
+          name: 'WordPress XMLRPC'
+          type: HTTP_AGENT
+          key: wordpress.xmlrpc.status
+          delay: 1d
+          description: |
+            Purpose
+            Detects whether the WordPress XML-RPC interface (/xmlrpc.php) is publicly accessible.
+            
+            Remediation
+            Disable XML-RPC if not required or restrict access using web server configuration or security plugins.
+            
+            False Positive
+            XML-RPC may be intentionally enabled for mobile apps, Jetpack, or external publishing tools.
+            
+            Reference
+            https://wordpress.org/support/article/xml-rpc-support/
+          preprocessing:
+            - type: REGEX
+              parameters:
+                - '(?s).*HTTP/[0-9\.]+\s([0-9]{3})\b(?!.*HTTP/)'
+                - \1
+              error_handler: CUSTOM_ERROR
+              error_handler_params: 'unknown HTTP code need to check url.'
+          url: '{$WP_PROTO}://{HOST.HOST}:{$WP_PORT}{$WP_ROOT}xmlrpc.php'
+          status_codes: ''
+          retrieve_mode: HEADERS
+          triggers:
+            - uuid: 72481b84bd114816aa02e2bfb5cbe8b0
+              expression: last(/Template_WordPress_Security_HTTP/wordpress.xmlrpc.status)=200
+              name: 'WordPress XMLRPC enabled'
+              url_name: 'Check xmlrpc.php'
+              url: '{$WP_PROTO}://{HOST.HOST}:{$WP_PORT}{$WP_ROOT}xmlrpc.php'
+              priority: INFO
+              description: |
+                Purpose
+                Detects whether the WordPress XML-RPC interface (/xmlrpc.php) is publicly accessible.
+                
+                Remediation
+                Disable XML-RPC if not required or restrict access using web server configuration or security plugins.
+                
+                False Positive
+                XML-RPC may be intentionally enabled for mobile apps, Jetpack, or external publishing tools.
+                
+                Reference
+                https://wordpress.org/support/article/xml-rpc-support/
+              manual_close: 'YES'
+        - uuid: 9c6e9b6e5d7c4e4a9b2f3c5a1d8e6f21
+          name: 'Environment file (.env) exposure'
+          type: HTTP_AGENT
+          key: wordpress.env
+          delay: 1d
+          value_type: TEXT
+          trends: '0'
+          url: '{$WP_PROTO}://{HOST.HOST}:{$WP_PORT}{$WP_ROOT}.env'
+          description: |
+            Purpose:
+            Detects exposure of a ".env" environment configuration file.
+            
+            Security Risk:
+            The .env file may contain sensitive credentials such as:
+            - database username/password
+            - API keys
+            - application secrets
+            - mail server credentials
+            
+            Exposure of this file can lead to full system compromise.
+            
+            Remediation:
+              Ensure the web server denies access to ".env" files.
+              Example for nginx:
+            
+                location ~ /\.env {
+                    deny all;
+                }
+            
+            False Positive:
+              Rare. A properly configured server should return 403 or 404.
+            
+            Reference:
+              https://owasp.org/www-project-top-ten/
+          triggers:
+            - uuid: e4a7b5c1f2d34c1a8b6e9d3f7a1c5e92
+              expression: 'find(/Template_WordPress_Security_HTTP/wordpress.env,,"like","DB_")=1 or last(/Template_WordPress_Security_HTTP/wordpress.env)<>""'
+              name: 'Environment configuration (.env) file exposed'
+              url_name: 'View .env'
+              url: '{$WP_PROTO}://{HOST.HOST}:{$WP_PORT}{$WP_ROOT}.env'
+              priority: DISASTER
+              description: |
+                Purpose:
+                Detects exposure of a ".env" environment configuration file.
+                
+                Security Risk:
+                The .env file may contain sensitive credentials such as:
+                - database username/password
+                - API keys
+                - application secrets
+                - mail server credentials
+                
+                Exposure of this file can lead to full system compromise.
+                
+                Remediation:
+                Ensure the web server denies access to ".env" files.
+                Example for nginx:
+                
+                  location ~ /\.env {
+                      deny all;
+                  }
+                
+                False Positive:
+                Rare. A properly configured server should return 403 or 404.
+                
+                Reference:
+                  https://owasp.org/www-project-top-ten/
+              manual_close: 'YES'
+  triggers:
+    - uuid: a784c166aaa34cb1b3f2db14df1452f1
+      expression: |
+        last(/Template_WordPress_Security_HTTP/wordpress.xmlrpc.status)=200
+        and
+        find(/Template_WordPress_Security_HTTP/wordpress.users.body,,"like","name")=1
+      name: 'WordPress attack surface brute-force attack detected (XML-RPC + user enumeration)'
+      url_name: 'Check xmlrpc.php'
+      url: '{$WP_PROTO}://{HOST.HOST}:{$WP_PORT}{$WP_ROOT}xmlrpc.php'
+      priority: DISASTER
+      description: |
+        Purpose
+        Detects a potentially dangerous WordPress configuration where both the XML-RPC
+        interface and user enumeration via the REST API are publicly accessible.
+        
+        When these two conditions are present together, attackers may be able to
+        identify valid usernames and perform high-speed authentication attempts
+        using the XML-RPC multicall functionality.
+        
+        This combination significantly increases the risk of brute-force attacks
+        against WordPress accounts.
+        
+        Remediation
+        Disable XML-RPC if it is not required, or restrict access using web server
+        configuration or security plugins.
+        
+        Restrict the REST API user endpoint (/wp-json/wp/v2/users) or prevent
+        unauthenticated access to user information.
+        
+        False Positive
+        Both XML-RPC and REST API user endpoints may be enabled in default WordPress
+        installations, but exposing both simultaneously increases attack surface.
+        
+        Reference
+        https://wordpress.org/documentation/article/hardening-wordpress/
+        https://developer.wordpress.org/rest-api/reference/users/
+        https://wordpress.org/support/article/xml-rpc-support/
+    - uuid: 51ec895baeb44ae995c4ae05f3255f8e
+      expression: |
+        last(/Template_WordPress_Security_HTTP/wordpress.xmlrpc.status)=200
+        and
+        find(/Template_WordPress_Security_HTTP/wordpress.users.body,,"like","name")=1
+        and
+        last(/Template_WordPress_Security_HTTP/wordpress.login.status)=200
+      name: 'WordPress attack surface brute-force attack detected (XML-RPC + user enumeration + login)'
+      url_name: 'Check wp-login.php'
+      url: '{$WP_PROTO}://{HOST.HOST}:{$WP_PORT}{$WP_ROOT}wp-login.php'
+      priority: DISASTER
+      description: |
+        Purpose
+        Detects a high-risk WordPress configuration where the login page,
+        XML-RPC interface, and user enumeration via the REST API are all
+        publicly accessible.
+        
+        This combination allows attackers to enumerate valid usernames and
+        perform high-speed authentication attempts using XML-RPC multicall
+        or direct login attacks.
+        
+        This significantly increases the likelihood of brute-force attacks
+        against WordPress accounts.
+        
+        Remediation
+        Restrict access to the WordPress login page using IP filtering,
+        CAPTCHA, or authentication gateways.
+        
+        Disable XML-RPC if it is not required, or restrict access through
+        web server configuration.
+        
+        Limit or disable REST API user enumeration endpoints
+        (/wp-json/wp/v2/users).
+        
+        False Positive
+        Public login pages are common in WordPress installations.
+        However, when combined with XML-RPC and user enumeration,
+        the attack surface becomes significantly larger.
+        
+        Reference
+        https://wordpress.org/documentation/article/hardening-wordpress/
+        https://wordpress.org/support/article/xml-rpc-support/
+        https://developer.wordpress.org/rest-api/reference/users/
