@@ -355,3 +355,11 @@ Use it at your own risk.
 ## Author
 
 Community contribution for WordPress exposure monitoring using Zabbix.
+
+---
+
+## Project Repository
+
+Source code and updates are available on GitHub:
+
+https://github.com/ripjyr/zabbix7.0-wordpress-monitoring
