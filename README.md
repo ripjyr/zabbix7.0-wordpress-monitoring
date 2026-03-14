@@ -35,6 +35,10 @@ The template monitors the following potential exposure points:
 | WordPress Cron                | Detects `/wp-cron.php` accessibility                |
 | WordPress Version             | Extracts version from RSS feed                      |
 | Directory Listing Exposure    | Detects directory listing in `/wp-content/uploads/` |
+| Setup Config Script Exposure  | Detects `/wp-admin/setup-config.php` availability   |
+| PHP Information Page          | Detects exposed `phpinfo.php` or `info.php` pages   |
+| Backup Directory Listing      | Detects directory listing in `/backup/` directory   |
+| Old Directory Listing         | Detects directory listing in `/old/` directory      |
 
 ---
 
@@ -113,8 +117,8 @@ This macro defines the ** protocol ** of the WordPress HTTP server.
 
 | Site URL                | Macro Value |
 | ----------------------- | ----------- |
-| **https**://example.com     | https       |
-| **http**://example.com/     | http        |
+| https://example.com     | https       |
+| http://example.com/     | http        |
 
 ### {$WP_PORT}
 ```
@@ -157,6 +161,31 @@ This macro defines the ** root path** of the WordPress installation.
 
 ---
 
+## Trigger Severity Policy
+
+The template uses the following severity classification:
+
+Information  
+Operational information such as WordPress version changes.
+
+Warning  
+Default WordPress behaviors that increase attack surface but
+are commonly enabled.
+
+Average  
+Conditions that allow reconnaissance activities such as
+user enumeration.
+
+High  
+Information exposure or server misconfiguration that may
+leak sensitive information.
+
+Disaster  
+Critical conditions that may allow site takeover or indicate
+an incomplete WordPress installation.
+
+---
+
 ## Trigger Behavior
 
 Triggers are generated when sensitive files or interfaces are publicly accessible.
@@ -169,6 +198,10 @@ Example alerts:
 * WordPress user enumeration possible
 * WordPress version leak via readme.html
 * WordPress directory listing enabled
+* phpinfo page exposure
+* backup directory listing
+* old directory listing
+* WordPress setup script exposure
 
 Most triggers require **manual close** to ensure administrators acknowledge the issue.
 
@@ -190,6 +223,110 @@ Directory listing detection is performed by scanning the response body for typic
 Index of
 Parent Directory
 ```
+
+---
+
+## Additional Security Checks
+
+### WordPress Setup Configuration Script
+
+The template checks whether the WordPress configuration setup script is publicly accessible.
+
+/wp-admin/setup-config.php
+
+
+This script is normally used only during the initial installation of WordPress.
+
+If it becomes accessible after a site migration or configuration loss, the site may enter a setup state where WordPress could potentially be reconfigured.
+
+This condition may indicate:
+
+- Missing `wp-config.php`
+- Incomplete WordPress migration
+- Database connection failure
+
+Administrators should verify that the WordPress installation is fully configured and that setup scripts are not accessible.
+
+---
+
+### PHP Information Page Exposure
+
+The template checks for exposed PHP information pages such as:
+
+```
+/phpinfo.php
+/info.php
+```
+
+These pages reveal detailed information about the server environment, including:
+
+- PHP version
+- loaded extensions
+- filesystem paths
+- server configuration
+
+This information may assist attackers in identifying vulnerabilities.
+
+If such pages are found, they should be removed from the web root after debugging.
+
+---
+
+### Backup and Old Directory Exposure
+
+The template checks for directory listing in common backup locations:
+
+```
+/backup/
+/old/
+```
+
+These directories are often created during site migrations or manual backup operations.
+
+If directory listing is enabled, attackers may be able to download:
+
+- backup archives
+- database dumps
+- full copies of previous website versions
+- WordPress configuration files
+
+These directories should not normally be accessible from the internet.
+
+Administrators should remove them from the web root or disable directory listing in the web server configuration.
+
+---
+
+## Composite Security Triggers
+
+In addition to individual exposure checks, this template also detects
+**combined attack surface conditions**.
+
+These composite triggers identify situations where multiple WordPress
+features are exposed simultaneously, significantly increasing the
+risk of brute-force attacks.
+
+### XML-RPC + User Enumeration
+
+If both of the following conditions are detected:
+
+- XML-RPC interface accessible (`/xmlrpc.php`)
+- User enumeration via REST API (`/wp-json/wp/v2/users`)
+
+Attackers may be able to identify valid usernames and perform
+high-speed authentication attempts using XML-RPC multicall.
+
+### XML-RPC + User Enumeration + Public Login Page
+
+If the following conditions are detected simultaneously:
+
+- XML-RPC enabled
+- REST API user enumeration possible
+- WordPress login page accessible (`/wp-login.php`)
+
+This combination significantly increases the attack surface for
+automated brute-force attacks against WordPress accounts.
+
+These conditions are treated as **high severity security risks**
+by this template.
 
 ---
 
