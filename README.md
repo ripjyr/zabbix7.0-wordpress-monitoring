@@ -39,6 +39,7 @@ The template monitors the following potential exposure points:
 | PHP Information Page          | Detects exposed `phpinfo.php` or `info.php` pages   |
 | Backup Directory Listing      | Detects directory listing in `/backup/` directory   |
 | Old Directory Listing         | Detects directory listing in `/old/` directory      |
+| Environment File Exposure    | Detects exposed `.env` configuration file      　　　　　　　　　　　　|
 
 ---
 
@@ -202,7 +203,7 @@ Example alerts:
 * backup directory listing
 * old directory listing
 * WordPress setup script exposure
-
+* environment configuration file exposure (.env)
 Most triggers require **manual close** to ensure administrators acknowledge the issue.
 
 ---
