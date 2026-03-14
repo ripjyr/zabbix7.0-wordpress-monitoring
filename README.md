@@ -208,6 +208,29 @@ Most triggers require **manual close** to ensure administrators acknowledge the 
 
 ---
 
+## Trigger Tagging
+
+All triggers include tags for easier filtering in dashboards and alert routing.
+
+Tag structure:
+
+```
+service=wordpress  
+domain=security  
+type=<security_category>
+```
+
+##Security categories:
+
+- attack_surface  
+- information_leak  
+- credential_leak  
+- enumeration  
+- misconfiguration  
+- backup_exposure
+
+---
+
 ## Monitoring Method
 
 All checks are performed using **HTTP HEAD or GET requests** via the Zabbix HTTP Agent.
